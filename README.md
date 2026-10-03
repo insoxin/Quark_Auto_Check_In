@@ -123,7 +123,16 @@ user=账号二; url=https://...;
 user=账号一; url=https://...; && user=账号二; url=https://...;
 ```
 
-### 4. 手动测试
+### 5. （可选）配置 Telegram 通知
+
+如果希望签到后推送到 Telegram，可额外添加以下 Secrets：
+
+- `TG_BOT_TOKEN`：你的 Telegram Bot Token（由 [@BotFather](https://t.me/BotFather) 创建机器人后获取）
+- `TG_CHAT_ID`：接收通知的 Chat ID（个人会话或群组 ID）
+
+未配置这两个 Secret 时，脚本只输出 GitHub Actions 日志，不会影响签到流程。
+
+### 6. 手动测试
 
 进入 **Actions → 夸克网盘每日签到 → Run workflow**。第一次运行会真实请求签到接口；当天全部账号已经成功后，再次运行将显示“今日已全部签到成功，跳过重复执行”。
 

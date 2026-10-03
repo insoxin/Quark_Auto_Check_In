@@ -19,6 +19,8 @@ import requests
 INFO_URL = "https://drive-m.quark.cn/1/clouddrive/capacity/growth/info"
 SIGN_URL = "https://drive-m.quark.cn/1/clouddrive/capacity/growth/sign"
 REQUIRED_PARAMS = ("kps", "sign", "vcode")
+TG_BOT_TOKEN_ENV = "TG_BOT_TOKEN"
+TG_CHAT_ID_ENV = "TG_CHAT_ID"
 
 
 class ConfigError(ValueError):
@@ -33,6 +35,42 @@ def send(title: str, message: str) -> None:
     """Print a notification-compatible summary."""
 
     print(f"{title}:\n{message}")
+    _send_telegram(title, message)
+
+
+def _send_telegram(title: str, message: str) -> None:
+    """Optionally forward the summary to Telegram."""
+
+    bot_token = os.getenv(TG_BOT_TOKEN_ENV, "").strip()
+    chat_id = os.getenv(TG_CHAT_ID_ENV, "").strip()
+    if not bot_token or not chat_id:
+        return
+
+    text = f"{title}\n\n{message}"
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+
+    try:
+        response = requests.post(
+            url,
+            json={"chat_id": chat_id, "text": text},
+            timeout=15,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except requests.RequestException as exc:
+        print(f"⚠️ TG 通知发送失败（{type(exc).__name__}）")
+        return
+    except ValueError:
+        print("⚠️ TG 通知发送失败（返回格式异常）")
+        return
+
+    if not isinstance(payload, dict) or not payload.get("ok"):
+        description = (
+            payload.get("description", "未知错误")
+            if isinstance(payload, dict)
+            else "未知错误"
+        )
+        print(f"⚠️ TG 通知发送失败（{description}）")
 
 
 def split_account_entries(raw_value: str | None) -> list[str]:

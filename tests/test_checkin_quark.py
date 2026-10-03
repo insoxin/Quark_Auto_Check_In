@@ -1,6 +1,7 @@
 import io
 import unittest
 from contextlib import redirect_stdout
+from unittest.mock import patch
 
 from checkIn_Quark import (
     ConfigError,
@@ -9,6 +10,7 @@ from checkIn_Quark import (
     extract_params,
     main,
     parse_account,
+    send,
     split_account_entries,
 )
 
@@ -175,6 +177,38 @@ class MainTests(unittest.TestCase):
         with redirect_stdout(io.StringIO()):
             exit_code = main("")
         self.assertEqual(exit_code, 2)
+
+
+class NotificationTests(unittest.TestCase):
+    def test_send_without_telegram_config_only_prints(self):
+        output = io.StringIO()
+        with (
+            patch("checkIn_Quark.os.getenv", return_value=""),
+            patch("checkIn_Quark.requests.post") as mocked_post,
+            redirect_stdout(output),
+        ):
+            send("标题", "内容")
+
+        mocked_post.assert_not_called()
+        self.assertIn("标题:\n内容", output.getvalue())
+
+    def test_send_with_telegram_config_posts_message(self):
+        response = FakeResponse({"ok": True})
+        output = io.StringIO()
+
+        def fake_getenv(key, default=""):
+            mapping = {"TG_BOT_TOKEN": "token", "TG_CHAT_ID": "12345"}
+            return mapping.get(key, default)
+
+        with (
+            patch("checkIn_Quark.os.getenv", side_effect=fake_getenv),
+            patch("checkIn_Quark.requests.post", return_value=response) as mocked_post,
+            redirect_stdout(output),
+        ):
+            send("标题", "内容")
+
+        mocked_post.assert_called_once()
+        self.assertIn("标题:\n内容", output.getvalue())
 
 
 if __name__ == "__main__":
